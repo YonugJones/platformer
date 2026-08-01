@@ -15,6 +15,10 @@ function love.load()
 
   JUMP_CUT     = 0.4
 
+  SPAWN_X      = PLAYER_X
+  SPAWN_Y      = PLAYER_Y
+  FALL_LIMIT_Y = 700
+
   PLATFORMS    = {
     { x = 0,   y = 400, width = 800, height = 100 },
     { x = 250, y = 280, width = 150, height = 20 }
@@ -44,6 +48,12 @@ function love.update(dt)
       PLAYER_VY = 0
       IS_GROUNDED = true
     end
+  end
+
+  if PLAYER_Y >= FALL_LIMIT_Y then
+    PLAYER_X = SPAWN_X
+    PLAYER_Y = SPAWN_Y
+    PLAYER_VY = 0
   end
 
   -- coyote timer: resets to full when grounded, ticks down when airborn --
