@@ -10,6 +10,11 @@ function love.load()
   JUMP_FORCE   = -600
   IS_GROUNDED  = false
 
+  COYOTE_TIME  = 0.1
+  COYOTE_TIMER = 0
+
+  JUMP_CUT     = 0.4
+
   PLATFORMS    = {
     { x = 0,   y = 400, width = 800, height = 100 },
     { x = 250, y = 280, width = 150, height = 20 }
@@ -40,11 +45,25 @@ function love.update(dt)
       IS_GROUNDED = true
     end
   end
+
+  -- coyote timer: resets to full when grounded, ticks down when airborn --
+  if IS_GROUNDED then
+    COYOTE_TIMER = COYOTE_TIME
+  else
+    COYOTE_TIMER = COYOTE_TIMER - dt
+  end
 end
 
 function love.keypressed(key)
-  if key == 'space' then
+  if key == 'space' and COYOTE_TIMER > 0 then
     PLAYER_VY = JUMP_FORCE
+    COYOTE_TIMER = 0
+  end
+end
+
+function love.keyreleased(key)
+  if key == 'space' and PLAYER_VY < 0 then
+    PLAYER_VY = PLAYER_VY * JUMP_CUT
   end
 end
 
