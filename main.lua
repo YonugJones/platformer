@@ -10,10 +10,10 @@ function love.load()
   JUMP_FORCE   = -600
   IS_GROUNDED  = false
 
-  GROUND_X     = 0
-  GROUND_Y     = 400
-  GROUND_W     = 800
-  GROUND_H     = 100
+  PLATFORMS    = {
+    { x = 0,   y = 400, width = 800, height = 100 },
+    { x = 250, y = 280, width = 150, height = 20 }
+  }
 end
 
 function love.update(dt)
@@ -26,19 +26,19 @@ function love.update(dt)
   end
 
   -- gravity --
-  PLAYER_VY            = PLAYER_VY + GRAVITY * dt
-  PLAYER_Y             = PLAYER_Y + PLAYER_VY * dt
+  PLAYER_VY   = PLAYER_VY + GRAVITY * dt
+  PLAYER_Y    = PLAYER_Y + PLAYER_VY * dt
 
   -- collision check --
-  local isOverlappingX = PLAYER_X + PLAYER_W > GROUND_X and PLAYER_X < GROUND_X + GROUND_W
-  local isOverlappingY = PLAYER_Y + PLAYER_H > GROUND_Y and PLAYER_Y < GROUND_Y + GROUND_H
-
-  if isOverlappingX and isOverlappingY then
-    PLAYER_Y    = GROUND_Y - PLAYER_H
-    PLAYER_VY   = 0
-    IS_GROUNDED = true
-  else
-    IS_GROUNDED = false
+  IS_GROUNDED = false
+  for _, p in ipairs(PLATFORMS) do
+    local isOverlappingX = PLAYER_X + PLAYER_W > p.x and PLAYER_X < p.x + p.width
+    local isOverlappingY = PLAYER_Y + PLAYER_H > p.y and PLAYER_Y < p.y + p.height
+    if isOverlappingX and isOverlappingY and PLAYER_VY >= 0 then
+      PLAYER_Y = p.y - PLAYER_H
+      PLAYER_VY = 0
+      IS_GROUNDED = true
+    end
   end
 end
 
@@ -50,7 +50,9 @@ end
 
 function love.draw()
   love.graphics.setColor(0.3, 0.7, 0.3)
-  love.graphics.rectangle('fill', GROUND_X, GROUND_Y, GROUND_W, GROUND_H)
+  for _, p in ipairs(PLATFORMS) do
+    love.graphics.rectangle('fill', p.x, p.y, p.width, p.height)
+  end
 
 
   love.graphics.setColor(1, 1, 1)
