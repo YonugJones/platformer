@@ -1,6 +1,8 @@
 function love.load()
   PLAYER_X     = 100
   PLAYER_Y     = 100
+  PLAYER_W     = 40
+  PLAYER_H     = 40
   PLAYER_SPEED = 200
 
   PLAYER_VY    = 0
@@ -24,12 +26,15 @@ function love.update(dt)
   end
 
   -- gravity --
-  PLAYER_VY = PLAYER_VY + GRAVITY * dt
-  PLAYER_Y  = PLAYER_Y + PLAYER_VY * dt
+  PLAYER_VY            = PLAYER_VY + GRAVITY * dt
+  PLAYER_Y             = PLAYER_Y + PLAYER_VY * dt
 
-  -- ground check --
-  if PLAYER_Y + 40 >= GROUND_Y then
-    PLAYER_Y    = GROUND_Y - 40
+  -- collision check --
+  local isOverlappingX = PLAYER_X + PLAYER_W > GROUND_X and PLAYER_X < GROUND_X + GROUND_W
+  local isOverlappingY = PLAYER_Y + PLAYER_H > GROUND_Y and PLAYER_Y < GROUND_Y + GROUND_H
+
+  if isOverlappingX and isOverlappingY then
+    PLAYER_Y    = GROUND_Y - PLAYER_H
     PLAYER_VY   = 0
     IS_GROUNDED = true
   else
@@ -49,5 +54,5 @@ function love.draw()
 
 
   love.graphics.setColor(1, 1, 1)
-  love.graphics.rectangle('fill', PLAYER_X, PLAYER_Y, 40, 40)
+  love.graphics.rectangle('fill', PLAYER_X, PLAYER_Y, PLAYER_W, PLAYER_H)
 end
