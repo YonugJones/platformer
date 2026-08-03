@@ -85,10 +85,10 @@ local function resolveCollisions(goalX, goalY)
 end
 
 function love.update(dt)
-  -- horizontal movement --
   PREV_X = PLAYER_X
   PREV_Y = PLAYER_Y
 
+  -- horizontal movement --
   local goalX = PLAYER_X
 
   if not IS_DASHING then
