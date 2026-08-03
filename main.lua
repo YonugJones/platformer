@@ -1,3 +1,5 @@
+_G.love = require 'love'
+
 function love.load()
   PLAYER_X           = 100
   PLAYER_Y           = 100
@@ -6,9 +8,12 @@ function love.load()
   PLAYER_SPEED       = 200
   IS_FACING_RIGHT    = true
 
+  PREV_X             = PLAYER_X
+  PREV_Y             = PLAYER_Y
+
   PLAYER_VY          = 0
-  GRAVITY            = 1500
-  JUMP_FORCE         = -600
+  GRAVITY            = 1800
+  JUMP_FORCE         = -800
   IS_GROUNDED        = false
 
   COYOTE_TIME        = 0.1
@@ -30,7 +35,7 @@ function love.load()
   CAMERA_Y           = 0
   CAMERA_SMOOTH      = 5
   CURRENT_LOOK_AHEAD = 0
-  LOOK_AHEAD_MAX     = 100 -- clamp so it can't look further than this in either direction
+  LOOK_AHEAD_MAX     = 150 -- clamp so it can't look further than this in either direction
   LOOK_AHEAD_GAIN    = 1.5 -- how many pixels of look-ahead shift per pixel of player horizontal movement
 
   -- dash --
@@ -42,29 +47,62 @@ function love.load()
   CAN_DASH           = true
 end
 
-function love.update(dt)
-  -- horizontal movement --
-  local moveAmount = 0
+-- shared overlap test: does a box at x, y, width w + height h overlap platform p? --
+local function checkOverlap(x, y, w, h, p)
+  return x < p.x + p.width
+      and x + w > p.x
+      and y < p.y + p.height
+      and y + h > p.y
+end
 
-  if not IS_DASHING then
-    if love.keyboard.isDown('a') then
-      PLAYER_X        = PLAYER_X - PLAYER_SPEED * dt
-      IS_FACING_RIGHT = false
-      moveAmount      = -PLAYER_SPEED * dt
-    end
+-- new function that resolves vertical and horizontal collisions
+local function resolveCollisions(goalX, goalY)
+  IS_GROUNDED = false
 
-    if love.keyboard.isDown('d') then
-      PLAYER_X        = PLAYER_X + PLAYER_SPEED * dt
-      IS_FACING_RIGHT = true
-      moveAmount      = PLAYER_SPEED * dt
+  for _, p in ipairs(PLATFORMS) do
+    if checkOverlap(goalX, goalY, PLAYER_W, PLAYER_H, p) then
+      local wasAbove = PREV_Y + PLAYER_H <= p.y
+      local wasBelow = PREV_Y >= p.y + p.height
+      local wasLeft  = PREV_X + PLAYER_W <= p.x
+      local wasRight = PREV_X >= p.x + p.width
+
+      if wasAbove and PLAYER_VY >= 0 then
+        goalY       = p.y - PLAYER_H
+        PLAYER_VY   = 0
+        IS_GROUNDED = true
+      elseif wasBelow and PLAYER_VY < 0 then
+        goalY = p.y + p.height
+        PLAYER_VY = 0
+      elseif wasLeft then
+        goalX = p.x - PLAYER_W
+      elseif wasRight then
+        goalX = p.x + p.width
+      end
     end
   end
 
-  -- dash movement --
-  if IS_DASHING then
-    PLAYER_X   = PLAYER_X + DASH_SPEED * DASH_DIRECTION * dt
-    moveAmount = DASH_SPEED * DASH_DIRECTION * dt
+  return goalX, goalY
+end
 
+function love.update(dt)
+  -- horizontal movement --
+  PREV_X = PLAYER_X
+  PREV_Y = PLAYER_Y
+
+  local goalX = PLAYER_X
+
+  if not IS_DASHING then
+    if love.keyboard.isDown('a') then
+      goalX           = PLAYER_X - PLAYER_SPEED * dt
+      IS_FACING_RIGHT = false
+    end
+
+    if love.keyboard.isDown('d') then
+      goalX           = PLAYER_X + PLAYER_SPEED * dt
+      IS_FACING_RIGHT = true
+    end
+  elseif IS_DASHING then
+    goalX = PLAYER_X + DASH_SPEED * DASH_DIRECTION * dt
     DASH_TIMER = DASH_TIMER - dt
     if DASH_TIMER <= 0 then
       IS_DASHING = false
@@ -77,19 +115,13 @@ function love.update(dt)
   else
     PLAYER_VY = PLAYER_VY + GRAVITY * dt
   end
-  PLAYER_Y    = PLAYER_Y + PLAYER_VY * dt
 
-  -- collision check --
-  IS_GROUNDED = false
-  for _, p in ipairs(PLATFORMS) do
-    local isOverlappingX = PLAYER_X + PLAYER_W > p.x and PLAYER_X < p.x + p.width
-    local isOverlappingY = PLAYER_Y + PLAYER_H > p.y and PLAYER_Y < p.y + p.height
-    if isOverlappingX and isOverlappingY and PLAYER_VY >= 0 then
-      PLAYER_Y    = p.y - PLAYER_H
-      PLAYER_VY   = 0
-      IS_GROUNDED = true
-    end
-  end
+  local goalY = PLAYER_Y + PLAYER_VY * dt
+
+  -- tile collisions--
+  PLAYER_X, PLAYER_Y = resolveCollisions(goalX, goalY)
+
+  local moveAmount = PLAYER_X - PREV_X
 
   -- dash resets once grounded --
   if IS_GROUNDED then
