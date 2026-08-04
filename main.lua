@@ -11,7 +11,7 @@ function love.load()
   camera    = Camera.new()
   platforms = {
     { x = 0,   y = 400, w = 800, h = 100 },
-    { x = 250, y = 280, w = 150, h = 20 }
+    { x = 250, y = 200, w = 150, h = 160 }
   }
 end
 

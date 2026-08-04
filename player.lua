@@ -2,34 +2,38 @@ local Player = {}
 
 function Player.new(x, y)
   return {
-    x             = x,
-    y             = y,
-    w             = 40,
-    h             = 40,
-    speed         = 200,
-    isFacingRight = true,
+    x              = x,
+    y              = y,
+    w              = 40,
+    h              = 40,
+    speed          = 200,
+    isFacingRight  = true,
 
-    prevX         = x,
-    prevY         = y,
+    prevX          = x,
+    prevY          = y,
 
-    vy            = 0,
-    gravity       = 1800,
-    jumpForce     = -800,
-    jumpCut       = 0.4,
-    isGrounded    = false,
-    coyoteTime    = 0.1,
-    coyoteTimer   = 0,
+    vy             = 0,
+    gravity        = 1800,
+    jumpForce      = -800,
+    jumpCut        = 0.4,
+    isGrounded     = false,
+    coyoteTime     = 0.1,
+    coyoteTimer    = 0,
 
-    spawnX        = x,
-    spawnY        = y,
-    fallLimitY    = 700,
+    spawnX         = x,
+    spawnY         = y,
+    fallLimitY     = 700,
 
-    dashSpeed     = 600,
-    dashDuration  = 0.2,
-    isDashing     = false,
-    dashTimer     = 0,
-    dashDirection = 1,
-    canDash       = true
+    dashSpeed      = 600,
+    dashDuration   = 0.2,
+    isDashing      = false,
+    dashTimer      = 0,
+    dashDirection  = 1,
+    canDash        = true,
+
+    isWallSliding  = false,
+    wallDirection  = 0,  -- -1 wall on left, 1 wall on right
+    wallSlideSpeed = 100 -- max fall speed while sliding down wall
   }
 end
 
@@ -39,6 +43,18 @@ local function checkOverlap(x, y, w, h, plat)
       and x + w > plat.x
       and y < plat.y + plat.h
       and y + h > plat.y
+end
+
+local function isTouchingWallSlide(p, dir, platforms)
+  local probeX = p.x + dir * 1 -- checks 1 pixel to the side of where the player currently is (the wall!)
+
+  for _, plat in ipairs(platforms) do
+    if checkOverlap(probeX, p.y, p.w, p.h, plat) then
+      return true
+    end
+  end
+
+  return false
 end
 
 local function resolveCollisions(p, goalX, goalY, platforms)
@@ -114,11 +130,28 @@ function Player.update(p, dt, platforms)
     end
   end
 
+  -- wall slide: only while airborn, not dashing, and holding toward a wall you're touching --
+  p.isWallSliding = false
+
+  if not p.isGrounded and not p.isDashing then
+    if love.keyboard.isDown('a') and isTouchingWallSlide(p, -1, platforms) then
+      p.isWallSliding = true
+      p.wallDirection = -1
+    elseif love.keyboard.isDown('d') and isTouchingWallSlide(p, 1, platforms) then
+      p.isWallSliding = true
+      p.wallDirection = 1
+    end
+  end
+
   -- gravity --
   if p.isDashing then
     p.vy = 0
   else
     p.vy = p.vy + p.gravity * dt
+    -- cap fall speed while wall sliding --
+    if p.isWallSliding and p.vy > p.wallSlideSpeed then
+      p.vy = p.wallSlideSpeed
+    end
   end
   local goalY = p.y + p.vy * dt
 
