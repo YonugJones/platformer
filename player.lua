@@ -2,38 +2,44 @@ local Player = {}
 
 function Player.new(x, y)
   return {
-    x              = x,
-    y              = y,
-    w              = 40,
-    h              = 40,
-    speed          = 200,
-    isFacingRight  = true,
+    x                    = x,
+    y                    = y,
+    w                    = 40,
+    h                    = 40,
+    speed                = 200,
+    isFacingRight        = true,
 
-    prevX          = x,
-    prevY          = y,
+    prevX                = x,
+    prevY                = y,
 
-    vy             = 0,
-    gravity        = 1800,
-    jumpForce      = -800,
-    jumpCut        = 0.4,
-    isGrounded     = false,
-    coyoteTime     = 0.1,
-    coyoteTimer    = 0,
+    vy                   = 0,
+    gravity              = 1800,
+    jumpForce            = -800,
+    jumpCut              = 0.4,
+    isGrounded           = false,
+    coyoteTime           = 0.1,
+    coyoteTimer          = 0,
 
-    spawnX         = x,
-    spawnY         = y,
-    fallLimitY     = 700,
+    spawnX               = x,
+    spawnY               = y,
+    fallLimitY           = 700,
 
-    dashSpeed      = 600,
-    dashDuration   = 0.2,
-    isDashing      = false,
-    dashTimer      = 0,
-    dashDirection  = 1,
-    canDash        = true,
+    dashSpeed            = 600,
+    dashDuration         = 0.2,
+    isDashing            = false,
+    dashTimer            = 0,
+    dashDirection        = 1,
+    canDash              = true,
 
-    isWallSliding  = false,
-    wallDirection  = 0,  -- -1 wall on left, 1 wall on right
-    wallSlideSpeed = 100 -- max fall speed while sliding down wall
+    isWallSliding        = false,
+    wallDirection        = 0,    -- -1 wall on left, 1 wall on right
+    wallSlideSpeed       = 100,  -- max fall speed while sliding down wall
+
+    wallJumpSpeedX       = 350,  -- horizontal push speed away from wall
+    wallJumpForceY       = -700, -- vertical jump force for a wall jump
+    wallJumpLockDuration = 0.15, -- how long normal a/d input is ignored after a wall jump
+    wallJumpLockTimer    = 0,
+    wallJumpDirection    = 0,    -- which way the wall jump is pushing (opposit of wallDirection)
   }
 end
 
@@ -86,9 +92,18 @@ local function resolveCollisions(p, goalX, goalY, platforms)
 end
 
 function Player.keypressed(p, key)
-  if key == 'space' and p.coyoteTimer > 0 then
-    p.vy          = p.jumpForce
-    p.coyoteTimer = 0
+  if key == 'space' then
+    if p.isWallSliding then
+      p.vy                = p.wallJumpForceY
+      p.wallJumpDirection = -p.wallDirection
+      p.wallJumpLockTimer = p.wallJumpLockDuration
+      p.isFacingRight     = p.wallJumpDirection > 0
+      p.isWallSliding     = false
+      p.wallDirection     = 0
+    elseif p.coyoteTimer > 0 then
+      p.vy          = p.jumpForce
+      p.coyoteTimer = 0
+    end
   end
 
   if key == 'j' and p.canDash and not p.isDashing then
@@ -112,7 +127,19 @@ function Player.update(p, dt, platforms)
   local goalX = p.x
 
   -- horizontal --
-  if not p.isDashing then
+  -- dashing --
+  if p.isDashing then
+    goalX = p.x + p.dashSpeed * p.dashDirection * dt
+    p.dashTimer = p.dashTimer - dt
+    if p.dashTimer <= 0 then
+      p.isDashing = false
+    end
+    -- wall jump --
+  elseif p.wallJumpLockTimer > 0 then
+    goalX               = p.x + p.wallJumpSpeedX * p.wallJumpDirection * dt
+    p.wallJumpLockTimer = p.wallJumpLockTimer - dt
+  else
+    -- normal a/d movement --
     if love.keyboard.isDown('a') then
       goalX           = p.x - p.speed * dt
       p.isFacingRight = false
@@ -122,18 +149,12 @@ function Player.update(p, dt, platforms)
       goalX           = p.x + p.speed * dt
       p.isFacingRight = true
     end
-  elseif p.isDashing then
-    goalX       = p.x + p.dashSpeed * p.dashDirection * dt
-    p.dashTimer = p.dashTimer - dt
-    if p.dashTimer <= 0 then
-      p.isDashing = false
-    end
   end
 
   -- wall slide: only while airborn, not dashing, and holding toward a wall you're touching --
   p.isWallSliding = false
 
-  if not p.isGrounded and not p.isDashing then
+  if not p.isGrounded and not p.isDashing and p.wallJumpLockTimer <= 0 then
     if love.keyboard.isDown('a') and isTouchingWallSlide(p, -1, platforms) then
       p.isWallSliding = true
       p.wallDirection = -1
@@ -141,6 +162,10 @@ function Player.update(p, dt, platforms)
       p.isWallSliding = true
       p.wallDirection = 1
     end
+  end
+
+  if not p.isWallSliding then
+    p.wallDirection = 0
   end
 
   -- gravity --
@@ -161,7 +186,7 @@ function Player.update(p, dt, platforms)
   local moveAmount = p.x - p.prevX
 
   -- dash resets once grounded --
-  if p.isGrounded then
+  if p.isGrounded or p.isWallSliding then
     p.canDash = true
   end
 
