@@ -6,7 +6,7 @@ function Player.new(x, y)
     y                    = y,
     w                    = 40,
     h                    = 40,
-    speed                = 200,
+    speed                = 350,
     isFacingRight        = true,
 
     prevX                = x,
@@ -35,7 +35,7 @@ function Player.new(x, y)
     wallDirection        = 0,    -- -1 wall on left, 1 wall on right
     wallSlideSpeed       = 100,  -- max fall speed while sliding down wall
 
-    wallJumpSpeedX       = 350,  -- horizontal push speed away from wall
+    wallJumpSpeedX       = 300,  -- horizontal push speed away from wall
     wallJumpForceY       = -700, -- vertical jump force for a wall jump
     wallJumpLockDuration = 0.15, -- how long normal a/d input is ignored after a wall jump
     wallJumpLockTimer    = 0,
@@ -123,23 +123,19 @@ end
 function Player.update(p, dt, platforms)
   p.prevX = p.x
   p.prevY = p.y
-
   local goalX = p.x
 
   -- horizontal --
-  -- dashing --
   if p.isDashing then
     goalX = p.x + p.dashSpeed * p.dashDirection * dt
     p.dashTimer = p.dashTimer - dt
     if p.dashTimer <= 0 then
       p.isDashing = false
     end
-    -- wall jump --
   elseif p.wallJumpLockTimer > 0 then
     goalX               = p.x + p.wallJumpSpeedX * p.wallJumpDirection * dt
     p.wallJumpLockTimer = p.wallJumpLockTimer - dt
-  else
-    -- normal a/d movement --
+  else -- normal a/d movement --
     if love.keyboard.isDown('a') then
       goalX           = p.x - p.speed * dt
       p.isFacingRight = false
