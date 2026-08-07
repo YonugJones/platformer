@@ -10,9 +10,10 @@ function love.load()
   player    = Player.new(100, 100)
   camera    = Camera.new()
   platforms = {
-    { x = 0,   y = 400, w = 800, h = 100 },
-    { x = 250, y = 200, w = 150, h = 160 },
-    { x = 500, y = 0,   w = 150, h = 200 },
+    { x = 0,   y = 400,  w = 800, h = 100 }, -- base level platform
+    { x = 250, y = 200,  w = 150, h = 160 },
+    { x = 500, y = 0,    w = 150, h = 200 },
+    { x = 500, y = -350, w = 150, h = 200 }
   }
 end
 
