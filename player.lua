@@ -40,6 +40,10 @@ function Player.new(x, y)
     wallJumpLockDuration = 0.15, -- how long normal a/d input is ignored after a wall jump
     wallJumpLockTimer    = 0,
     wallJumpDirection    = 0,    -- which way the wall jump is pushing (opposit of wallDirection)
+
+    jumpBuffer           = .1,   -- seconds a jump press is remembered before landing
+    jumpBufferTimer      = 0,
+    isJumpHeld           = false
   }
 end
 
@@ -91,6 +95,19 @@ local function resolveCollisions(p, goalX, goalY, platforms)
   return goalX, goalY
 end
 
+local function tryJump(p)
+  if p.coyoteTimer > 0 then
+    p.vy = p.jumpForce
+
+    if not p.isJumpHeld then
+      p.vy = p.vy * p.jumpCut
+    end
+
+    p.coyoteTimer     = 0
+    p.jumpBufferTimer = 0
+  end
+end
+
 function Player.keypressed(p, key)
   if key == 'space' then
     if p.isWallSliding then
@@ -100,9 +117,10 @@ function Player.keypressed(p, key)
       p.isFacingRight     = p.wallJumpDirection > 0
       p.isWallSliding     = false
       p.wallDirection     = 0
-    elseif p.coyoteTimer > 0 then
-      p.vy          = p.jumpForce
-      p.coyoteTimer = 0
+    else
+      p.jumpBufferTimer = p.jumpBuffer
+      p.isJumpHeld = true
+      tryJump(p)
     end
   end
 
@@ -115,8 +133,11 @@ function Player.keypressed(p, key)
 end
 
 function Player.keyreleased(p, key)
-  if key == 'space' and p.vy < 0 then
-    p.vy = p.vy * p.jumpCut
+  if key == 'space' then
+    p.isJumpHeld = false
+    if p.vy < 0 then
+      p.vy = p.vy * p.jumpCut
+    end
   end
 end
 
@@ -175,6 +196,15 @@ function Player.update(p, dt, platforms)
     end
   end
   local goalY = p.y + p.vy * dt
+
+  -- jump buffer --
+  if p.jumpBufferTimer > 0 then
+    p.jumpBufferTimer = p.jumpBufferTimer - dt
+  end
+
+  if p.isGrounded and p.jumpBufferTimer > 0 then
+    tryJump(p)
+  end
 
   -- tile collisions --
   p.x, p.y = resolveCollisions(p, goalX, goalY, platforms)
