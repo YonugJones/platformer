@@ -95,6 +95,22 @@ local function resolveCollisions(p, goalX, goalY, platforms)
   return goalX, goalY
 end
 
+local function isTouchingHazard(p, hazards)
+  for _, hz in ipairs(hazards) do
+    if checkOverlap(p.x, p.y, p.w, p.h, hz) then
+      return true
+    end
+  end
+
+  return false
+end
+
+local function resetToSpawn(p)
+  p.x  = p.spawnX
+  p.y  = p.spawnY
+  p.vy = 0
+end
+
 local function tryJump(p)
   if p.coyoteTimer > 0 then
     p.vy = p.jumpForce
@@ -141,7 +157,7 @@ function Player.keyreleased(p, key)
   end
 end
 
-function Player.update(p, dt, platforms)
+function Player.update(p, dt, platforms, hazards)
   p.prevX = p.x
   p.prevY = p.y
   local goalX = p.x
@@ -225,9 +241,12 @@ function Player.update(p, dt, platforms)
 
   -- fall off stage check --
   if p.y >= p.fallLimitY then
-    p.x  = p.spawnX
-    p.y  = p.spawnY
-    p.vy = 0
+    resetToSpawn(p)
+  end
+
+  -- hazards check --
+  if hazards and isTouchingHazard(p, hazards) then
+    resetToSpawn(p)
   end
 
   return moveAmount
