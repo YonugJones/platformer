@@ -1,6 +1,6 @@
 local Player = {}
 
-function Player.new(x, y)
+function Player.new(x, y, keys)
   return {
     x                    = x,
     y                    = y,
@@ -43,7 +43,14 @@ function Player.new(x, y)
 
     jumpBuffer           = .1,   -- seconds a jump press is remembered before landing
     jumpBufferTimer      = 0,
-    isJumpHeld           = false
+    isJumpHeld           = false,
+
+    keys                 = {
+      left  = keys and keys.left or 'a',
+      right = keys and keys.right or 'd',
+      jump  = keys and keys.jump or 'space',
+      dash  = keys and keys.dash or 'j'
+    }
   }
 end
 
@@ -125,7 +132,7 @@ local function tryJump(p)
 end
 
 function Player.keypressed(p, key)
-  if key == 'space' then
+  if key == p.keys.jump then
     if p.isWallSliding then
       p.vy                = p.wallJumpForceY
       p.wallJumpDirection = -p.wallDirection
@@ -140,7 +147,7 @@ function Player.keypressed(p, key)
     end
   end
 
-  if key == 'j' and p.canDash and not p.isDashing then
+  if key == p.keys.dash and p.canDash and not p.isDashing then
     p.isDashing     = true
     p.dashTimer     = p.dashDuration
     p.dashDirection = p.isFacingRight and 1 or -1
@@ -149,7 +156,7 @@ function Player.keypressed(p, key)
 end
 
 function Player.keyreleased(p, key)
-  if key == 'space' then
+  if key == p.keys.jump then
     p.isJumpHeld = false
     if p.vy < 0 then
       p.vy = p.vy * p.jumpCut
@@ -173,12 +180,12 @@ function Player.update(p, dt, platforms, hazards)
     goalX               = p.x + p.wallJumpSpeedX * p.wallJumpDirection * dt
     p.wallJumpLockTimer = p.wallJumpLockTimer - dt
   else -- normal a/d movement --
-    if love.keyboard.isDown('a') then
+    if love.keyboard.isDown(p.keys.left) then
       goalX           = p.x - p.speed * dt
       p.isFacingRight = false
     end
 
-    if love.keyboard.isDown('d') then
+    if love.keyboard.isDown(p.keys.right) then
       goalX           = p.x + p.speed * dt
       p.isFacingRight = true
     end
@@ -188,10 +195,10 @@ function Player.update(p, dt, platforms, hazards)
   p.isWallSliding = false
 
   if not p.isGrounded and not p.isDashing and p.wallJumpLockTimer <= 0 then
-    if love.keyboard.isDown('a') and isTouchingWallSlide(p, -1, platforms) then
+    if love.keyboard.isDown(p.keys.left) and isTouchingWallSlide(p, -1, platforms) then
       p.isWallSliding = true
       p.wallDirection = -1
-    elseif love.keyboard.isDown('d') and isTouchingWallSlide(p, 1, platforms) then
+    elseif love.keyboard.isDown(p.keys.right) and isTouchingWallSlide(p, 1, platforms) then
       p.isWallSliding = true
       p.wallDirection = 1
     end
